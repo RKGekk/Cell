@@ -8,7 +8,7 @@
 
 class Sheet : public SheetInterface {
 public:
-    using SheetList = std::vector<std::vector<std::unique_ptr<CellInterface>>>;
+    using SheetList = std::unordered_map<Position, std::unique_ptr<Cell>, HashPosition>;
 
     Sheet();
 
@@ -28,7 +28,7 @@ public:
 
 private:
     void CheckPosInPlace(Position pos) const;
-    void ResizeSheetList(Position pos);
+    void MakeCell(Position pos, std::string text);
     Size CreatePrintableSize() const;
 
     template <typename Func>
@@ -50,6 +50,7 @@ private:
     }
 
     SheetList sheet_list_;
+    Positions positions_;
 };
 
 // Создаёт готовую к работе пустую таблицу.

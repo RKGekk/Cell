@@ -5,12 +5,12 @@
 
 #include "cell.h"
 
-Cell::Cell(SheetInterface& sheet)
-    : Cell("", sheet) {
+Cell::Cell(SheetInterface& sheet, Position pos)
+    : Cell("", sheet, pos) {
 }
 
-Cell::Cell(std::string text, SheetInterface& sheet)
-    : sheet_(sheet) {
+Cell::Cell(std::string text, SheetInterface& sheet, Position pos)
+    : sheet_(sheet), pos_(pos) {
     Set(std::move(text));
 }
 
@@ -58,6 +58,10 @@ std::vector<Position> Cell::GetReferencedCells() const {
         return referenced_cells;
     }
     return {};
+}
+
+bool Cell::IsEmpty() const {
+    return cell_value_->GetText().empty();
 }
 
 bool Cell::IsReferenced() const {

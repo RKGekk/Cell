@@ -27,6 +27,16 @@ struct Position {
     static const Position NONE;
 };
 
+class HashPosition {
+public:
+    size_t operator() (const Position& pos) const;
+
+private:
+    std::hash<int> i_hasher;
+};
+
+using Positions = std::unordered_set<Position, HashPosition>;
+
 // Описывает ошибки, которые могут возникнуть при вычислении формулы.
 class FormulaError {
 public:

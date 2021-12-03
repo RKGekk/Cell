@@ -17,14 +17,14 @@ Sheet::~Sheet() {
 
 void Sheet::SetCell(Position pos, std::string text) {
     CheckPosInPlace(pos);
-
-    if (auto* cell = GetCell(pos)) {
-        dynamic_cast<Cell*>(cell)->Set(std::move(text));
+    if (!text.empty()) {
+        positions_.insert(pos);
+    }
+    if (sheet_list_.count(pos) == 0) {
+        MakeCell(pos, std::move(text));
     }
     else {
-        ResizeSheetList(pos);
-        sheet_list_.at(pos.row).at(pos.col) = std::make_unique<Cell>("", *this);
-        SetCell(pos, std::move(text));
+        sheet_list_[pos]->Set(std::move(text));
     }
 }
 
@@ -33,24 +33,29 @@ const CellInterface* Sheet::GetCell(Position pos) const {
 }
 CellInterface* Sheet::GetCell(Position pos) {
     CheckPosInPlace(pos);
-    if (sheet_list_.size() <= static_cast<size_t>(pos.row)) {
+    if (sheet_list_.count(pos) == 0) {
         return nullptr;
     }
-    if (sheet_list_.at(pos.row).size() <= static_cast<size_t>(pos.col)) {
+    Cell* cell = sheet_list_.at(pos).get();
+    if (!cell || (cell->IsEmpty() && !cell->IsReferenced())) {
         return nullptr;
     }
-    return sheet_list_.at(pos.row).at(pos.col).get();
+    return cell;
 }
 
 void Sheet::ClearCell(Position pos) {
-    CheckPosInPlace(pos);
-    if (GetCell(pos)) {
-        sheet_list_.at(pos.row).at(pos.col).reset();
-    }
+    SetCell(pos, std::string());
+    positions_.erase(pos);
 }
 
 Size Sheet::GetPrintableSize() const {
-    return CreatePrintableSize();
+    int max_r = 0;
+    int max_c = 0;
+    for (Position pos : positions_) {
+        max_r = std::max(max_r, pos.row + 1);
+        max_c = std::max(max_c, pos.col + 1);
+    }
+    return { max_r, max_c };
 }
 
 void Sheet::PrintValues(std::ostream& output) const {
@@ -60,10 +65,10 @@ void Sheet::PrintValues(std::ostream& output) const {
     Printer(output, print_get_value);
 }
 void Sheet::PrintTexts(std::ostream& output) const {
-    auto print_get_text = [&output](const CellInterface* ptr_value) {
-        output << ptr_value->GetText();
+    auto print_get_value = [&output](const CellInterface* ptr_value) {
+        std::visit([&](const auto& x) { output << x; }, ptr_value->GetValue());
     };
-    Printer(output, print_get_text);
+    Printer(output, print_get_value);
 }
 
 void Sheet::CheckPosInPlace(Position pos) const {
@@ -75,37 +80,20 @@ void Sheet::CheckPosInPlace(Position pos) const {
     }
 }
 
-void Sheet::ResizeSheetList(Position pos) {
-    if (sheet_list_.size() <= static_cast<size_t>(pos.row)) {
-        int new_row = pos.row + 1;
-        sheet_list_.resize(new_row);
+Size Sheet::CreatePrintableSize() const {
+    int max_r = 0;
+    int max_c = 0;
+    for (Position pos : positions_) {
+        max_r = std::max(max_r, pos.row + 1);
+        max_c = std::max(max_c, pos.col + 1);
     }
-    if (sheet_list_.at(pos.row).size() <= static_cast<size_t>(pos.col)) {
-        int new_col = pos.col + 1;
-        sheet_list_.at(pos.row).resize(new_col);
-    }
+    return { max_r, max_c };
 }
 
-Size Sheet::CreatePrintableSize() const {
-    int row = 0;
-    int col = 0;
-
-    int local_row = 1;
-    for (const auto& row_value : sheet_list_) {
-        int local_col = 1;
-        for (const auto& col_value : row_value) {
-            if (col_value) {
-                if (local_col > col) {
-                    col = local_col;
-                }
-                row = local_row;
-            }
-            local_col++;
-        }
-        local_row++;
-    }
-
-    return { row, col };
+void Sheet::MakeCell(Position pos, std::string text) {
+    Cell* cell = new Cell(*this, pos);
+    cell->Set(std::move(text));
+    sheet_list_[pos].reset(cell);
 }
 
 std::unique_ptr<SheetInterface> CreateSheet() {

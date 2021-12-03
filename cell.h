@@ -132,9 +132,9 @@ namespace cell_detail {
 
 class Cell : public CellInterface {
 public:
-    Cell(SheetInterface& sheet);
+    Cell(SheetInterface& sheet, Position pos);
 
-    Cell(std::string text, SheetInterface& sheet);
+    Cell(std::string text, SheetInterface& sheet, Position pos);
 
     ~Cell();
 
@@ -153,6 +153,8 @@ public:
     bool IsReferenced() const;
 
     bool IsCacheValie() const;
+
+    bool IsEmpty() const;
 
 private:
     void CreateReferencedCellsInPlace(std::vector<Position>& referenced_cells, std::unordered_set<const Cell*>& visited_cells) const;
@@ -179,6 +181,7 @@ private:
     std::unique_ptr<cell_detail::CellValueInterface> CreateCell(std::string text);
 
     SheetInterface& sheet_;
+    Position pos_;
     std::unique_ptr<cell_detail::CellValueInterface> cell_value_;
     mutable std::unordered_set<const Cell*> binding_cells_;
 };
